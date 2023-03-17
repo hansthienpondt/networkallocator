@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package networkallocator.proto;
+
+option go_package = ".;networkallocator";
+import "google/protobuf/any.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
+
+
+message Labels {
+    map<string,string> labels = 1;
+}
+ 
+message SetVlanIdRequest {
+    uint32 vlanid = 1;
+    string networkinstance = 2;
+    optional string node = 3;
+    optional string interface = 4;
+}
+
+// Define Requests and Responses
+
+
+service NetworkAllocator {
+    rpc GetVlanId(GetVlanIdRequest) returns (GetVlanIdResponse);
+    rpc SetVlanId(SetVlanIdRequest) returns (SetVlanIdResponse);
+    rpc DeleteVlanId(DeleteVlanIdRequest) returns (DeleteVlanIdResponse);
+    rpc GetAsn(GetAsnRequest) returns (GetAsnResponse);
+    rpc SetAsn(SetAsnRequest) returns (SetAsnResponse);
+    rpc DeleteAsn(DeleteAsnRequest) returns (DeleteAsnResponse);
+    
+}
