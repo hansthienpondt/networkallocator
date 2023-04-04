@@ -10,9 +10,9 @@ import (
 )
 
 type DB struct {
-	mu    *sync.RWMutex
-	store map[uint16]VLAN
-	label labels.Set
+	mu     *sync.RWMutex
+	store  map[uint16]VLAN
+	labels labels.Set
 }
 
 type DBIterator struct {
@@ -42,9 +42,9 @@ func (it *DBIterator) HasConsecutive(i uint16) bool {
 
 func NewDB() *DB {
 	db := &DB{
-		mu:    &sync.RWMutex{},
-		store: make(map[uint16]VLAN),
-		label: labels.Set{},
+		mu:     &sync.RWMutex{},
+		store:  make(map[uint16]VLAN),
+		labels: labels.Set{},
 	}
 	vlan0, _ := NewVLAN(0, map[string]string{"type": "untagged", "status": "reserved"})
 	vlan1, _ := NewVLAN(1, map[string]string{"type": "default", "status": "reserved"})
@@ -143,25 +143,25 @@ func (db *DB) GetByLabel(selector labels.Selector) VLANs {
 func (db *DB) Labels() labels.Set {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
-	return db.label
+	return db.labels
 }
 func (db *DB) SetLabels(l labels.Set) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
-	db.label = l
+	db.labels = l
 }
 func (db *DB) MergeLabels(l labels.Set) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
-	db.label = labels.Merge(db.label, l)
+	db.labels = labels.Merge(db.labels, l)
 }
 func (db *DB) DeleteLabels() {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
-	db.label = labels.Set{}
+	db.labels = labels.Set{}
 }
 
 func (db *DB) GetAll() VLANs {
