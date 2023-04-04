@@ -30,6 +30,15 @@ func (it *DBIterator) Next() bool {
 	return it.current < len(it.keys)
 }
 
+func (it *DBIterator) HasConsecutive(i uint16) bool {
+	// i includes current value, deduct the current value.
+	i--
+	if it.current+int(i) >= len(it.keys) {
+		return false
+	}
+	return it.keys[it.current]+int(i) == it.keys[it.current+int(i)]
+}
+
 func NewDB() *DB {
 	db := &DB{
 		mu:    &sync.RWMutex{},
@@ -38,15 +47,54 @@ func NewDB() *DB {
 	vlan0, _ := NewVLAN(0, map[string]string{"type": "untagged", "status": "reserved"})
 	vlan1, _ := NewVLAN(1, map[string]string{"type": "default", "status": "reserved"})
 	vlan4095, _ := NewVLAN(4095, map[string]string{"type": "reserved", "status": "reserved"})
-	db.add(vlan0)
-	db.add(vlan1)
-	db.add(vlan4095)
+	db.store[vlan0.ID()] = vlan0
+	db.store[vlan1.ID()] = vlan1
+	db.store[vlan4095.ID()] = vlan4095
 	return db
 }
 
-func (db *DB) add(vlan VLAN) error {
-	db.store[vlan.ID()] = vlan
+func (db *DB) Add(vlan VLAN) error {
+	_, exists := db.store[vlan.ID()]
+	if exists {
+		return fmt.Errorf("VLAN %d already exists in the VLAN database ", vlan.ID())
+	}
+	return db.Set(vlan)
+}
+
+func (db *DB) AddVlanList(vlans VLANs) error {
+	var err error
+	for _, vlan := range vlans {
+		err = db.Add(vlan)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
+}
+func (db *DB) FindVlanRange(min, amount uint16) VLANs {
+	/*
+		min specifies the minimum boundary from which available Vlan Ranges should be returned.
+		amount specifies the number of consecutive vlans required
+	*/
+	var vlans VLANs
+	var free *DBIterator = db.IterateFree()
+
+	for free.Next() {
+		if free.Value().ID() < min {
+			continue
+		}
+		if free.HasConsecutive(amount) {
+			min = free.Value().ID()
+			vlans = append(vlans, free.Value())
+			amount--
+		}
+		if amount == 0 {
+			return vlans
+		}
+	}
+
+	return make(VLANs, 0)
+
 }
 
 func (db *DB) Set(vlan VLAN) error {
@@ -58,7 +106,11 @@ func (db *DB) Set(vlan VLAN) error {
 	case 4095:
 		return fmt.Errorf("VLAN %d is reserved, cannot be added to the database", vlan.ID())
 	default:
-		return db.add(vlan)
+		db.mu.Lock()
+		defer db.mu.Unlock()
+
+		db.store[vlan.ID()] = vlan
+		return nil
 	}
 }
 
@@ -100,14 +152,14 @@ func (db *DB) GetAll() VLANs {
 }
 
 func (db *DB) Has(id uint16) bool {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
 	_, ok := db.store[id]
 	return ok
 }
 
 func (db *DB) Delete(id uint16) error {
-	db.mu.Lock()
-	defer db.mu.Unlock()
-
 	switch id {
 	case 0:
 		return fmt.Errorf("VLAN %d is the untagged VLAN, cannot be deleted from the database", id)
@@ -116,6 +168,9 @@ func (db *DB) Delete(id uint16) error {
 	case 4095:
 		return fmt.Errorf("VLAN %d is reserved, cannot be deleted from the database", id)
 	default:
+		db.mu.Lock()
+		defer db.mu.Unlock()
+
 		delete(db.store, id)
 		return nil
 	}
@@ -127,15 +182,43 @@ func (db *DB) Count() int {
 
 	return len(db.store)
 }
+func (db *DB) CountFree() int {
+	return ethernet.VLANMax - db.Count() + 1
+}
 
 func (db *DB) Iterate() *DBIterator {
 	var vlans []int
+	db.mu.RLock()
+	defer db.mu.RUnlock()
 	for k := range db.store {
 		vlans = append(vlans, int(k))
 	}
 	sort.Ints(vlans)
 
 	return &DBIterator{current: -1, keys: vlans, db: db.store}
+}
+
+func (db *DB) IterateFree() *DBIterator {
+	var vlans []int
+	var store map[uint16]VLAN = make(map[uint16]VLAN)
+
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	for id := 0; id < ethernet.VLANMax; id++ {
+		_, exists := db.store[uint16(id)]
+		if !exists {
+			vlans = append(vlans, id)
+			store[uint16(id)] = VLAN{
+				VLAN:   ethernet.VLAN{ID: uint16(id)},
+				labels: labels.Set{},
+			}
+		}
+	}
+	sort.Ints(vlans)
+
+	return &DBIterator{current: -1, keys: vlans, db: store}
+
 }
 
 // Alternative Implementation
