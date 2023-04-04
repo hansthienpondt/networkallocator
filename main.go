@@ -10,6 +10,8 @@ import (
 func main() {
 
 	db := NewDB()
+	db.MergeLabels(map[string]string{"type": "router"})
+
 	v100, _ := NewVLAN(100, map[string]string{"key": "value"})
 	v200, _ := NewVLAN(200, map[string]string{"key": "value"})
 
