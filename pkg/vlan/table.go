@@ -134,7 +134,7 @@ func (db *DB) GetByLabel(selector labels.Selector) VLANs {
 
 	iter := db.Iterate()
 	for iter.Next() {
-		if selector.Matches(iter.Value().Labels()) {
+		if selector.Matches(iter.Value().Labels) {
 			vlans = append(vlans, iter.Value())
 		}
 	}
@@ -236,7 +236,7 @@ func (db *DB) IterateFree() *DBIterator {
 			vlans = append(vlans, id)
 			store[uint16(id)] = VLAN{
 				VLAN:   ethernet.VLAN{ID: uint16(id)},
-				labels: labels.Set{},
+				Labels: labels.Set{},
 			}
 		}
 	}

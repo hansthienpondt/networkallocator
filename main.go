@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 
 	. "github.com/hansthienpondt/networkallocator/pkg/vlan"
@@ -37,4 +38,13 @@ func main() {
 	   		fmt.Println(iter.Value(), iter.HasConsecutive(10))
 	   	}
 	*/
+	j, _ := json.Marshal(gap.Labels)
+	k := labels.Set{}
+
+	json.Unmarshal(j, &k)
+
+	fmt.Println(string(j), k.String())
+	j2v, _ := json.Marshal(gap)
+	j2k, _ := gap.MarshalBinary()
+	fmt.Println(j2k, j2v)
 }

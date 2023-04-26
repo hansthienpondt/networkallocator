@@ -13,7 +13,7 @@ const (
 
 type VLAN struct {
 	ethernet.VLAN
-	labels labels.Set
+	Labels labels.Set
 }
 type VLANs []VLAN
 
@@ -25,9 +25,9 @@ func (vs VLANs) SetLabels(l labels.Set) VLANs {
 }
 
 func (v VLAN) ID() uint16                  { return v.VLAN.ID }
-func (v VLAN) Labels() labels.Set          { return v.labels }
-func (v VLAN) String() string              { return fmt.Sprintf("%d %s", v.ID(), v.Labels().String()) }
-func (v VLAN) SetLabels(l labels.Set) VLAN { v.labels = l; return v }
+func (v VLAN) GetLabels() labels.Set       { return v.Labels }
+func (v VLAN) String() string              { return fmt.Sprintf("%d:%s", v.ID(), v.Labels.String()) }
+func (v VLAN) SetLabels(l labels.Set) VLAN { v.Labels = l; return v }
 
 func NewVLAN(id uint16, l map[string]string) (VLAN, error) {
 	var label labels.Set
@@ -42,6 +42,6 @@ func NewVLAN(id uint16, l map[string]string) (VLAN, error) {
 	}
 	return VLAN{
 		VLAN:   ethernet.VLAN{ID: id},
-		labels: label,
+		Labels: label,
 	}, nil
 }
