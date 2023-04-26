@@ -47,4 +47,10 @@ func main() {
 	j2v, _ := json.Marshal(gap)
 	j2k, _ := gap.MarshalBinary()
 	fmt.Println(j2k, j2v)
+
+	vlan, err := db.FindAllocateVlan(map[string]string{"created": "FindAllocateVlan"})
+
+	fmt.Println(vlan, err)
+	fmt.Println(db.GetAll())
+
 }

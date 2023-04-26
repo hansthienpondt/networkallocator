@@ -56,8 +56,7 @@ func NewDB() *DB {
 }
 
 func (db *DB) Add(vlan VLAN) error {
-	_, exists := db.store[vlan.ID()]
-	if exists {
+	if db.Has(vlan.ID()) {
 		return fmt.Errorf("VLAN %d already exists in the VLAN database ", vlan.ID())
 	}
 	return db.Set(vlan)
@@ -72,6 +71,24 @@ func (db *DB) AddVlanList(vlans VLANs) error {
 		}
 	}
 	return nil
+}
+
+func (db *DB) FindAllocateVlan(l labels.Set) (VLAN, error) {
+	var err error
+	var iter *DBIterator = db.IterateFree()
+	var vlan VLAN
+
+	for iter.Next() {
+		vlan = iter.Value()
+		vlan = vlan.SetLabels(l)
+
+		err = db.Add(vlan)
+		// if no error has been returned, adding the vlan was successful.
+		if err == nil {
+			return vlan, err
+		}
+	}
+	return VLAN{}, fmt.Errorf("Could find/allocate a new VLAN")
 }
 func (db *DB) FindVlanRange(min, amount uint16) VLANs {
 	/*
